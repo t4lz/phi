@@ -8,7 +8,7 @@
 namespace phi{
 //---------------------------------------------------------------------------
 
-void binaryen_test() {
+void binaryen_hello_world() {
     BinaryenModuleRef module = BinaryenModuleCreate();
 
     // Create a function type for  i32 (i32, i32)
@@ -37,10 +37,16 @@ void binaryen_test() {
 }
 
 void hello() {
-    binaryen_test();
-    std::cout << "Hello, World!" << std::endl;
+    binaryen_hello_world();
 }
 
+//---------------------------------------------------------------------------
+size_t inject(char *buff, size_t inputSize, size_t bufferSize, const char *importModuleName, const char *importBaseName) {
+    auto module = BinaryenModuleRead(buff, inputSize);
+    std::cout << "Input module:" << std::endl;
+    BinaryenModulePrint(module);
+    return inputSize;
+}
 //---------------------------------------------------------------------------
 }   // namespace pljit::lexer
 //---------------------------------------------------------------------------
