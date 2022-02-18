@@ -3,6 +3,7 @@
 
 //---------------------------------------------------------------------------
 #include <cstddef>
+#include <cstdint>
 
 namespace phi{
 //---------------------------------------------------------------------------
@@ -14,10 +15,10 @@ void hello();
 // outputSize: Length of allocated buffer.
 // importModuleName: Module name of the injected imported function.
 // importBaseName: Base name of the injected imported function.
-size_t inject(char* buff, size_t inputSize, size_t bufferSize, const char* importModuleName, const char* importBaseName);
+size_t inject(char* buff, size_t inputSize, size_t bufferSize, const int64_t interval, const char* importModuleName, const char* importBaseName);
 
 //---------------------------------------------------------------------------
-}   // namespace pljit::lexer
+}   // namespace phi
 //---------------------------------------------------------------------------
 
 #endif //PHI_PHI_HPP

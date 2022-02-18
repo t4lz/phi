@@ -1,4 +1,4 @@
-add_library(phi phi.cpp phi.hpp)
+add_library(phi phi.cpp phi.hpp PhiPass.cpp)
 find_library(BINARYEN_LIB binaryen HINTS /home/tal/Documents/Studium/TUM/Kurse/7-WS21-22/BA/binaryen/lib)
 target_link_libraries(phi PRIVATE ${BINARYEN_LIB})
 find_path (BINARYEN_C_H_DIR binaryen-c.h HINTS /home/tal/Documents/Studium/TUM/Kurse/7-WS21-22/BA/binaryen/src/)

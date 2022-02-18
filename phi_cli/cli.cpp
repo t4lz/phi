@@ -23,7 +23,7 @@ int main(int argc, char * argv[]){
     if (!file.read(buffer, size)){
         std::cout << "Could not read file \"" << argv[1] << "\". Stoping." << std::endl;
     }
-    size_t outputSize = phi::inject(buffer, size, bufferSize, "phi_client", "injected_import");
+    size_t outputSize = phi::inject(buffer, size, bufferSize, 1000000, "phi_client", "injected_import");
     std::string outputFileName(argv[1]);
     outputFileName.append("_phi.wasm");
     auto myfile = std::fstream(outputFileName, std::ios::out | std::ios::binary);
