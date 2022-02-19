@@ -1,17 +1,19 @@
 #ifndef PHI_PASS_H
 #define PHI_PASS_H
 
-#include <ir/bits.h>
 #include <pass.h>
-#include <wasm.h>
+#include <wasm-builder.h>
 
 //---------------------------------------------------------------------------
 namespace phi {
 //---------------------------------------------------------------------------
 using namespace wasm;
 
-//struct PhiPass : public WalkerPass<PostWalker<PhiPass>> {
-//};
+class PhiPass : public WalkerPass<PostWalker<PhiPass>> {
+public:
+    int64_t accumulatedCost = 0;
+    void visitConst(Const* curr);
+};
 
 //---------------------------------------------------------------------------
 }   // namespace phi

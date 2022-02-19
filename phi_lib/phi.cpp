@@ -1,4 +1,5 @@
 #include "phi.hpp"
+#include "PhiPass.hpp"
 
 #include <iostream>
 #include <binaryen-c.h>
@@ -35,6 +36,13 @@ size_t inject(char *buff, size_t inputSize, size_t bufferSize, const int64_t int
     BinaryenAddFunctionImport(module, "phi_injected_import", importModuleName, importBaseName, BinaryenTypeNone(), BinaryenTypeNone());
     // TODO: Check that global does not exist.
     BinaryenAddGlobal(module, PHI_GLOBAL_COUNTER_NAME, BinaryenTypeInt64(), true, BinaryenConst(module, BinaryenLiteralInt64(interval)));
+
+    auto phiPass = make_unique<PhiPass>();
+
+    PassRunner passRunner((Module*)module);
+//    passRunner.options = PassOptions::getWithDefaultOptimizationOptions();
+    passRunner.add(move(phiPass));
+    passRunner.run();
 
     std::cout << "Output module:" << std::endl;
     BinaryenModulePrint(module);

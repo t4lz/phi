@@ -1,10 +1,16 @@
 //
 // Created by tal on 18/02/2022.
 //
-//#include "PhiPass.hpp"
+#include "PhiPass.hpp"
 //---------------------------------------------------------------------------
 namespace phi {
 //---------------------------------------------------------------------------
+    void PhiPass::visitConst(Const *curr) {
+        if (curr->type == Type::i32){
+            Builder builder(*getModule());
+            replaceCurrent(builder.makeConst(int32_t(1337)));
+        }
+    }
 //---------------------------------------------------------------------------
 }   // namespace phi
 //---------------------------------------------------------------------------
