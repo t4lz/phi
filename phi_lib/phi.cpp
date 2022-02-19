@@ -19,7 +19,6 @@ void injectToFunction(BinaryenFunctionRef function) {
 namespace phi{
 //---------------------------------------------------------------------------
 
-static const constexpr char* PHI_GLOBAL_COUNTER_NAME = "_phi_global_counter";
 
 size_t inject(char *buff, size_t inputSize, size_t bufferSize, const int64_t interval, const char *importModuleName, const char *importBaseName) {
     auto module = BinaryenModuleRead(buff, inputSize);
@@ -33,14 +32,13 @@ size_t inject(char *buff, size_t inputSize, size_t bufferSize, const int64_t int
 
     // Currently the import always has the type none -> none (no params, no result).
     // TODO: Is this internal name safe? Can a collision happen? What happens on collision?
-    BinaryenAddFunctionImport(module, "phi_injected_import", importModuleName, importBaseName, BinaryenTypeNone(), BinaryenTypeNone());
+    BinaryenAddFunctionImport(module, PhiPass::PHI_INJECTED_FUNCTION_NAME, importModuleName, importBaseName, BinaryenTypeNone(), BinaryenTypeNone());
     // TODO: Check that global does not exist.
-    BinaryenAddGlobal(module, PHI_GLOBAL_COUNTER_NAME, BinaryenTypeInt64(), true, BinaryenConst(module, BinaryenLiteralInt64(interval)));
+    BinaryenAddGlobal(module, PhiPass::PHI_GLOBAL_COUNTER_NAME, BinaryenTypeInt64(), true, BinaryenConst(module, BinaryenLiteralInt64(interval)));
 
-    auto phiPass = make_unique<PhiPass>();
+    auto phiPass = make_unique<PhiPass>(interval);
 
     PassRunner passRunner((Module*)module);
-//    passRunner.options = PassOptions::getWithDefaultOptimizationOptions();
     passRunner.add(move(phiPass));
     passRunner.run();
 
