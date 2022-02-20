@@ -11,11 +11,28 @@ namespace phi {
         accumulatedCost++;
     }
 
+//---------------------------------------------------------------------------
     void PhiPass::visitBinary(Binary *curr) {
         accumulatedCost++;
     }
 
+//---------------------------------------------------------------------------
     void PhiPass::visitBreak(Break* curr) {
+        if (accumulatedCost) {  // TODO: Cann accumulatedCost ever be 0? if not remove if.
+            injectCounterCheckBeforeCurrent(curr);
+        }
+        accumulatedCost = 1;    // Reset all cost accumulated up till now, add 1 for break cost.
+    }
+
+//---------------------------------------------------------------------------
+    void PhiPass::visitBlock(Block *curr) {
+    }
+
+//---------------------------------------------------------------------------
+    PhiPass::PhiPass(int64_t interval) : interval(interval) {}  // Constructor.
+
+//---------------------------------------------------------------------------
+    void PhiPass::injectCounterCheckBeforeCurrent(Expression* curr) {
         Builder builder(*getModule());
         auto block = builder.blockify(
                 // counter -= accumulatedCost.
@@ -43,18 +60,14 @@ namespace phi {
                                 builder.makeGlobalSet(              // counter := <interval>
                                         PHI_GLOBAL_COUNTER_NAME,
                                         builder.makeConst(int64_t(interval))
-                                        )
-
+                                )
                         )
                 )
-
         );
         block->list.push_back(curr);
         replaceCurrent(block);
-        accumulatedCost = 0;
     }
 
-    PhiPass::PhiPass(int64_t interval) : interval(interval) {}
 //---------------------------------------------------------------------------
 }   // namespace phi
 //---------------------------------------------------------------------------
