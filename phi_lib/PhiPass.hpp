@@ -14,18 +14,38 @@ class PhiPass : public WalkerPass<PostWalker<PhiPass>> {
     const int64_t interval;
     int64_t accumulatedCost = 0;
 
-    // Inject WASM code: Subtract accumulated cost (WASM const), if counter <= 0 call host and reset counter.
-    // C++: reset accumulated cost.
-    void injectCounterCheckBeforeCurrent(Expression* curr);
+
+    // Replace current expression with block that contains subtraction, than current expression.
+    void subtractBeforeCurrent(Expression* curr);
+    // Replace expr with block that contains subtraction, than expr.
+    void subtractBefore(Expression** expr);
+    void subtractAfterCurrent(Expression* curr);
+    void subtractAfter(Expression **expr);
+    void checkBeforeCurrent(Expression* curr);
+    void checkBefore(Expression** expr);
+    // Get built counter subtraction "code".
+    GlobalSet *buildCounterDecrease(Builder &builder) const;
+    // Get built counter check "code".
+    If *buildCheck(Builder &builder) const;
 
 public:
     static const constexpr char* PHI_GLOBAL_COUNTER_NAME = "_phi_global_counter";
     static const constexpr char* PHI_INJECTED_FUNCTION_NAME = "_phi_host_function";
     explicit PhiPass(int64_t interval);
-    void visitConst(Const* curr);
-    void visitBinary(Binary* curr);
-    void visitBreak(Break* curr);
-    void visitBlock(Block* curr);
+    static void scan(PhiPass* self, Expression** currp);
+    static void doSubtractBeforeCurrent(PhiPass* self, Expression** currp);
+    static void doSubtractAfterCurrent(PhiPass* self, Expression** currp);
+    static void doCheckBeforeCurrent(PhiPass* self, Expression** currp);
+    void visitConst(Const* constExpr);
+    void visitBinary(Binary* binaryExpr);
+    void visitCall(Call* callExpr);
+    void visitCallIndirect(CallIndirect* callIndirectExpr);
+    void visitBreak(Break* breakExpr);
+    void visitBlock(Block* blockExpr);
+    void visitFunction(Function* functionExpr);
+    void visitSwitch(Switch* switchExpr);
+    void walkGlobal(Global* global);
+
 };
 
 //---------------------------------------------------------------------------
