@@ -20,7 +20,8 @@ namespace phi{
 //---------------------------------------------------------------------------
 
 
-size_t inject(char *buff, size_t inputSize, size_t bufferSize, const int64_t interval, const char *importModuleName, const char *importBaseName) {
+std::vector<std::byte>
+inject(char *buff, size_t inputSize, const int64_t interval, const char *importModuleName, const char *importBaseName) {
     auto module = BinaryenModuleRead(buff, inputSize);
 
     std::cout << "Input module:" << std::endl;
@@ -28,7 +29,7 @@ size_t inject(char *buff, size_t inputSize, size_t bufferSize, const int64_t int
 
     if (!BinaryenModuleValidate(module))
         // We rely on properties of a valid module to assert the security of the injection, so we do not accept invalid modules.
-        return 0;
+        return {};
 
     // Currently the import always has the type none -> none (no params, no result).
     // TODO: Is this internal name safe? Can a collision happen? What happens on collision?
@@ -46,9 +47,11 @@ size_t inject(char *buff, size_t inputSize, size_t bufferSize, const int64_t int
     BinaryenModulePrint(module);
 
     assert(BinaryenModuleValidate(module));
-    return BinaryenModuleWrite(module, buff, bufferSize);   // Return output size.
-    // TODO: Use BinaryenModuleAllocateAndWrite instead of BinaryenModuleWrite?
-    //       Currently user code has to guess how big the result will be and allocate enough memory for that.
+    auto result = BinaryenModuleAllocateAndWrite(module, nullptr);
+    auto* moduleBuff = static_cast<std::byte*>(result.binary);
+    std::vector<std::byte> moduleByteVector(moduleBuff, moduleBuff + result.binaryBytes);
+    free(result.binary);
+    return std::move(moduleByteVector);
 }
 //---------------------------------------------------------------------------
 }   // namespace phi

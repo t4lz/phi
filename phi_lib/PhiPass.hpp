@@ -36,15 +36,27 @@ public:
     static void doSubtractBeforeCurrent(PhiPass* self, Expression** currp);
     static void doSubtractAfterCurrent(PhiPass* self, Expression** currp);
     static void doCheckBeforeCurrent(PhiPass* self, Expression** currp);
-    void visitConst(Const* constExpr);
-    void visitBinary(Binary* binaryExpr);
     void visitCall(Call* callExpr);
     void visitCallIndirect(CallIndirect* callIndirectExpr);
+    void visitCallRef(CallRef* callRefExpr);
     void visitBreak(Break* breakExpr);
+    void visitBrOn(Break* breakExpr);
     void visitBlock(Block* blockExpr);
     void visitFunction(Function* functionExpr);
     void visitSwitch(Switch* switchExpr);
+    void visitReturn(Return* returnExpr);
     void walkGlobal(Global* global);
+
+    // based on wasm-traversal.h form binaryen.
+    // Declare all instruction visits:
+#define VISIT(CLASS_TO_VISIT)                                               \
+    void visit##CLASS_TO_VISIT(CLASS_TO_VISIT* curr);
+
+    // Declare all instruction visits that have non-1 cost:
+#define VISIT_COST(CLASS_TO_VISIT, cost)                                    \
+    void visit##CLASS_TO_VISIT(CLASS_TO_VISIT* curr);
+
+#include "visit-instructions.def"
 
 };
 

@@ -18,16 +18,14 @@ int main(int argc, char * argv[]){
     std::ifstream file(argv[1], std::ios::binary | std::ios::ate);
     std::streamsize size = file.tellg();
     file.seekg(0, std::ios::beg);
-    size_t bufferSize = size * 2 + 1024;
-    auto buffer = new char[bufferSize];                  // Allocate more for place for injected code.
-    if (!file.read(buffer, size)){
+    std::vector<char> inputModule(size);
+    if (!file.read(inputModule.data(), size)){
         std::cout << "Could not read file \"" << argv[1] << "\". Stoping." << std::endl;
     }
-    size_t outputSize = phi::inject(buffer, size, bufferSize, 1000000, "phi_client", "injected_import");
+    auto wasmVector = phi::inject(inputModule.data(), size, 1000000, "phi_client", "injected_import");
     std::string outputFileName(argv[1]);
     outputFileName.append("_phi.wasm");
     auto myfile = std::fstream(outputFileName, std::ios::out | std::ios::binary);
-    myfile.write(buffer, static_cast<std::streamsize>(outputSize));
-    delete[] buffer;
+    myfile.write(reinterpret_cast<char *>(wasmVector.data()), static_cast<std::streamsize>(wasmVector.size()));
     return 0;
 }

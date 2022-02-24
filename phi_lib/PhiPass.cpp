@@ -7,25 +7,10 @@
 //---------------------------------------------------------------------------
 namespace phi {
 //---------------------------------------------------------------------------
-    void PhiPass::visitConst(Const* constExpr) {
-        std::cout << "accumulating cost for const: " << constExpr->value << std::endl;
-        accumulatedCost++;
-        std::cout << "accumulated cost is now " << accumulatedCost << std::endl;
-    }
 
-//---------------------------------------------------------------------------
-    void PhiPass::visitBinary(Binary *binaryExpr) {
-        std::cout << "accumulating cost for binary: " << binaryExpr->op << std::endl;
-        accumulatedCost++;
-        std::cout << "accumulated cost is now " << accumulatedCost << std::endl;
-    }
-
-//---------------------------------------------------------------------------
     void PhiPass::visitBreak(Break* breakExpr) {
-        std::cout << "accumulating cost for break: " << breakExpr->value << std::endl;
         accumulatedCost++;
         subtractBeforeCurrent(breakExpr);
-        std::cout << "accumulated cost is now " << accumulatedCost << std::endl;
     }
 
 //---------------------------------------------------------------------------
@@ -56,11 +41,10 @@ namespace phi {
     }
 
 //---------------------------------------------------------------------------
-    // Replace current expression with block that contains subtraction, than current expression.
+    // Replace current expression with block that contains subtraction, then current expression.
     void PhiPass::subtractBeforeCurrent(Expression* curr) {
         if (!accumulatedCost)
             return;
-        std::cout << "subtracting " << accumulatedCost << std::endl;
         // Only decrease counter, without performing check.
         Builder builder(*getModule());
         auto block = builder.blockify(
@@ -170,12 +154,14 @@ namespace phi {
     }
 
     void PhiPass::visitCall(Call *callExpr) {
-        accumulatedCost++;  // Pay cost of the call (and any unpaid args) in advance.
+        // accumulatedCost already contains also the operands' cost.
+        accumulatedCost += 4;   // Pay also cost of the call in advance.
         checkBeforeCurrent(callExpr);
     }
 
     void PhiPass::visitCallIndirect(CallIndirect *callIndirectExpr) {
-        accumulatedCost++;  // Pay cost of the call (and any unpaid args) in advance.
+        // accumulatedCost already contains also the operands' cost.
+        accumulatedCost += 6;  // Pay also cost of the call in advance.
         checkBeforeCurrent(callIndirectExpr);
     }
 
@@ -210,8 +196,35 @@ namespace phi {
     }
 
     void PhiPass::visitSwitch(Switch *switchExpr) {
+        accumulatedCost += 2;
         subtractBeforeCurrent(switchExpr);
     }
+
+    void PhiPass::visitReturn(Return *returnExpr) {
+        accumulatedCost += 100;
+        subtractBeforeCurrent(returnExpr);
+    }
+
+    void PhiPass::visitCallRef(CallRef *callRefExpr) {
+        // accumulatedCost already contains cost of operands.
+        accumulatedCost += 5;  // Pay also cost of the call in advance.
+        checkBeforeCurrent(callRefExpr);
+    }
+
+    // based on wasm-traversal.h form binaryen.
+    // Define all instruction visits with cost 1:
+#define VISIT(CLASS_TO_VISIT)                                               \
+    void PhiPass::visit##CLASS_TO_VISIT(CLASS_TO_VISIT* curr){              \
+        accumulatedCost++;                                                  \
+    }
+
+    // Define all instruction visits that have non-1 cost:
+#define VISIT_COST(CLASS_TO_VISIT, cost)                                    \
+    void PhiPass::visit##CLASS_TO_VISIT(CLASS_TO_VISIT* curr){              \
+        accumulatedCost += cost;                                            \
+    }
+
+#include "visit-instructions.def"
 //---------------------------------------------------------------------------
 }   // namespace phi
 //---------------------------------------------------------------------------
