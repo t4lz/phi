@@ -11,7 +11,7 @@ namespace phi{
 
 
 std::vector<std::byte>
-inject(char *buff, size_t inputSize, const int64_t interval, const char *importModuleName, const char *importBaseName) {
+inject(char *buff, size_t inputSize, const int64_t interval, std::string&& importModuleName, std::string&& importBaseName) {
     auto module = BinaryenModuleRead(buff, inputSize);
 
     std::cout << "Input module:" << std::endl;
@@ -21,7 +21,7 @@ inject(char *buff, size_t inputSize, const int64_t interval, const char *importM
         // We rely on properties of a valid module to assert the security of the injection, so we do not accept invalid modules.
         return {};
 
-    auto phiPass = make_unique<PhiPass>(interval, importModuleName, importBaseName);
+    auto phiPass = std::make_unique<PhiPass>(interval, std::move(importModuleName), std::move(importBaseName));
 
     PassRunner passRunner((Module*)module);
     passRunner.add(move(phiPass));

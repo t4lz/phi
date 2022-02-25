@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+#include <string>
 
 namespace phi{
 //---------------------------------------------------------------------------
@@ -14,8 +15,8 @@ namespace phi{
 // interval: Interval for periodic handover. Will call injected interval about every <interval> instructions.
 // importModuleName: Module name of the injected imported function.
 // importBaseName: Base name of the injected imported function.
-    std::vector<std::byte>
-    inject(char* buff, size_t inputSize, int64_t interval, const char* importModuleName, const char* importBaseName);
+std::vector<std::byte>
+inject(char* buff, size_t inputSize, int64_t interval, std::string&& importModuleName, std::string&& importBaseName);
 
 //---------------------------------------------------------------------------
 }   // namespace phi

@@ -15,6 +15,7 @@ class PhiPass : public WalkerPass<PostWalker<PhiPass>> {
     int64_t accumulatedCost = 0;
     Name internalFunctionName;
     Name globalName;
+
     std::string importModuleName;
     std::string importBaseName;
 
