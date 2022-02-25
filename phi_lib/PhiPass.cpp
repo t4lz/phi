@@ -1,8 +1,7 @@
 #include "PhiPass.hpp"
+#include <ir/names.h>
 
-// TODO:
-//  - Should we have a pointer to builder as a class member?
-//  - Use wasm::Name for all names.
+#include <utility>
 
 //---------------------------------------------------------------------------
 namespace phi {
@@ -24,16 +23,18 @@ namespace phi {
     }
 
 //---------------------------------------------------------------------------
-    PhiPass::PhiPass(int64_t interval) : interval(interval) {}  // Constructor.
+    PhiPass::PhiPass(int64_t interval, std::string importModuleName, std::string importBaseName)
+    : interval(interval), importModuleName(std::move(importModuleName)), importBaseName(std::move(importBaseName)) {}  // Constructor.
 
 //---------------------------------------------------------------------------
-    GlobalSet* PhiPass::buildCounterDecrease(Builder& builder) const {
+    GlobalSet* PhiPass::buildCounterDecrease(Builder& builder) {
+        auto counterName = getGlobalName();
         // counter -= <accumulatedCost>.
         return builder.makeGlobalSet(
-                PHI_GLOBAL_COUNTER_NAME,
+                counterName,
                 builder.makeBinary(
                         SubInt64,
-                        builder.makeGlobalGet(PHI_GLOBAL_COUNTER_NAME, Type::i64),
+                        builder.makeGlobalGet(counterName, Type::i64),
                         builder.makeConst(int64_t(accumulatedCost)
                         )
                 )
@@ -56,22 +57,24 @@ namespace phi {
     }
 
 //---------------------------------------------------------------------------
-    If* PhiPass::buildCheck(Builder& builder) const {
+    If* PhiPass::buildCheck(Builder& builder) {
+        auto counterName = getGlobalName();
+        auto functionName = getInternalFunctionName();
         // counter -= <accumulatedCost>.
         return builder.makeIf(                                     // if counter <= 0:
                 builder.makeBinary(
                         LeSInt64,
-                        builder.makeGlobalGet(PHI_GLOBAL_COUNTER_NAME, Type::i64),
+                        builder.makeGlobalGet(counterName, Type::i64),
                         builder.makeConst(int64_t(0))
                 ),
                 builder.blockify(
                         builder.makeCall(                       // then call host.
-                                PHI_INJECTED_FUNCTION_NAME,
+                                functionName,
                                 {},
                                 Type::none
                         ),
                         builder.makeGlobalSet(              // counter := <interval>
-                                PHI_GLOBAL_COUNTER_NAME,
+                                counterName,
                                 builder.makeConst(int64_t(interval))
                         )
                 )
@@ -209,6 +212,35 @@ namespace phi {
         // accumulatedCost already contains cost of operands.
         accumulatedCost += 5;  // Pay also cost of the call in advance.
         checkBeforeCurrent(callRefExpr);
+    }
+
+    Name &PhiPass::getInternalFunctionName() {
+        if (!internalFunctionName.is()) {
+            internalFunctionName = Names::getValidFunctionName(*getModule(), PHI_INJECTED_FUNCTION_NAME);
+        }
+        return internalFunctionName;
+    }
+
+    Name &PhiPass::getGlobalName() {
+        if (!globalName.is()) {
+            Builder builder(*getModule());
+            globalName = Names::getValidGlobalName(*getModule(), PHI_GLOBAL_COUNTER_NAME);
+            getModule()->addGlobal(Builder::makeGlobal(
+                    globalName, Type::i64,builder.makeConst(int64_t (interval)), Builder::Mutable));
+        }
+        return globalName;
+    }
+
+    void PhiPass::visitModule(Module *module) {
+        // Add import.
+        auto import = Builder::makeFunction(
+                getInternalFunctionName(),
+                Signature(Type::none, Type::none),
+                {}
+        );
+        import->module = importModuleName;
+        import->base = importBaseName;
+        module->addFunction(std::move(import));
     }
 
     // based on wasm-traversal.h form binaryen.

@@ -13,6 +13,15 @@ class PhiPass : public WalkerPass<PostWalker<PhiPass>> {
 
     const int64_t interval;
     int64_t accumulatedCost = 0;
+    Name internalFunctionName;
+    Name globalName;
+    std::string importModuleName;
+    std::string importBaseName;
+
+
+    Name& getInternalFunctionName();
+    Name& getGlobalName();
+
 
 
     // Replace current expression with block that contains subtraction, than current expression.
@@ -24,14 +33,14 @@ class PhiPass : public WalkerPass<PostWalker<PhiPass>> {
     void checkBeforeCurrent(Expression* curr);
     void checkBefore(Expression** expr);
     // Get built counter subtraction "code".
-    GlobalSet *buildCounterDecrease(Builder &builder) const;
+    GlobalSet *buildCounterDecrease(Builder &builder);
     // Get built counter check "code".
-    If *buildCheck(Builder &builder) const;
+    If *buildCheck(Builder &builder);
+    static const constexpr char* PHI_INJECTED_FUNCTION_NAME = "_phi_host_function";
 
 public:
     static const constexpr char* PHI_GLOBAL_COUNTER_NAME = "_phi_global_counter";
-    static const constexpr char* PHI_INJECTED_FUNCTION_NAME = "_phi_host_function";
-    explicit PhiPass(int64_t interval);
+    PhiPass(int64_t interval, std::string importModuleName, std::string importBaseName);
     static void scan(PhiPass* self, Expression** currp);
     static void doSubtractBeforeCurrent(PhiPass* self, Expression** currp);
     static void doSubtractAfterCurrent(PhiPass* self, Expression** currp);
@@ -45,16 +54,17 @@ public:
     void visitFunction(Function* functionExpr);
     void visitSwitch(Switch* switchExpr);
     void visitReturn(Return* returnExpr);
+    void visitModule(Module* module);
     void walkGlobal(Global* global);
 
     // based on wasm-traversal.h form binaryen.
     // Declare all instruction visits:
-#define VISIT(CLASS_TO_VISIT)                                               \
-    void visit##CLASS_TO_VISIT(CLASS_TO_VISIT* curr);
+#define VISIT(CLASS)                                               \
+    void visit##CLASS(CLASS* curr);
 
     // Declare all instruction visits that have non-1 cost:
-#define VISIT_COST(CLASS_TO_VISIT, cost)                                    \
-    void visit##CLASS_TO_VISIT(CLASS_TO_VISIT* curr);
+#define VISIT_COST(CLASS, cost)                                    \
+    void visit##CLASS(CLASS* curr);
 
 #include "visit-instructions.def"
 
