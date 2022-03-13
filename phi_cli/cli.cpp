@@ -18,11 +18,12 @@ int main(int argc, char * argv[]){
     std::vector<char> inputModule(size);
     if (!file.read(inputModule.data(), size)){
         std::cout << "Could not read file \"" << argv[1] << "\". Stoping." << std::endl;
+        return 2;
     }
-    auto wasmVector = inject(inputModule.data(), size, 1000000, "phi_client", "injected_import");
+    auto wasmVector = inject(inputModule, 1000000, "phi_client", "injected_import");
     std::string outputFileName(argv[1]);
     outputFileName.append("_phi.wasm");
     auto myfile = std::fstream(outputFileName, std::ios::out | std::ios::binary);
-    myfile.write(reinterpret_cast<char *>(wasmVector.data()), static_cast<std::streamsize>(wasmVector.size()));
+    myfile.write(wasmVector.data(), static_cast<std::streamsize>(wasmVector.size()));
     return 0;
 }
