@@ -2,7 +2,6 @@
 #include <fstream>
 #include <cstdlib>
 #include <string>
-#include <cinttypes>
 #include <chrono>
 
 #include "../phi_lib/phi.hpp"
@@ -19,20 +18,9 @@ auto hostFunc(
     return nullptr;
 }
 
-
-void run() {
-    // Initialize.
-    std::cout << "Initializing..." << std::endl;
-    auto engine = wasm::Engine::make();
-    auto store_ = wasm::Store::make(engine.get());
-    auto store = store_.get();
-
-    auto phiStore_ = wasm::Store::make(engine.get());
-    auto phiStore = phiStore_.get();
-
+wasm::vec<byte_t> getBinary(std::string&& filename) {
     // Load binary.
-    std::cout << "Loading binary..." << std::endl;
-    std::ifstream file("../../benchmarks/count-to-mil.wasm");
+    std::ifstream file(filename);
     file.seekg(0, std::ios_base::end);
     auto file_size = file.tellg();
     file.seekg(0);
@@ -43,19 +31,42 @@ void run() {
         std::cout << "> Error loading module!" << std::endl;
         exit(1);
     }
+    return std::move(binary);
+}
 
+std::unique_ptr<wasm::Func> getCallback(wasm::Store* store) {
+    // Create external function.
+    auto func_type = wasm::FuncType::make(
+            wasm::ownvec<wasm::ValType>::make(),
+            wasm::ownvec<wasm::ValType>::make()
+    );
+    return wasm::Func::make(store, func_type.get(), hostFunc);
+}
+
+
+void run(std::unique_ptr<wasm::Engine>& engine, std::string&& wasmFile, bool callHost = true) {
+    // Wee8 boilerplate:
+    auto store_ = wasm::Store::make(engine.get());
+    auto store = store_.get();
+    auto phiStore_ = wasm::Store::make(engine.get());
+    auto phiStore = phiStore_.get();
+
+    auto binary = getBinary(std::move(wasmFile));
+
+    // Convert to normal vector for phi.
     auto inputModule = std::vector<char>(binary.get(), binary.get() + binary.size());
 
+    // Perform Phi injection.
     auto beforeInject = std::chrono::high_resolution_clock::now();
-    auto phiBinary = phi::inject(inputModule, 1000000, "v8tester", "host");
+    auto phiBinary = phi::inject(inputModule, callHost ? 1000000 : 1000000000 , "v8tester", "host");
     auto afterInject = std::chrono::high_resolution_clock::now();
     auto injection_ms = std::chrono::duration_cast<std::chrono::milliseconds>(afterInject - beforeInject);
     std::cout << "Phi injection completed in " << injection_ms.count() << " ms." << std::endl;
 
+    // Convert to weird v8 vec.
     auto phiBinaryVec = wasm::vec<byte_t>::make(phiBinary.size(), phiBinary.data());
 
     // Compile.
-    std::cout << "Compiling module..." << std::endl;
     auto module = wasm::Module::make(store, binary);
     if (!module) {
         std::cout << "> Error compiling module!" << std::endl;
@@ -68,7 +79,6 @@ void run() {
     }
 
     // Instantiate.
-    std::cout << "Instantiating module..." << std::endl;
     wasm::Extern* imports[] = {};
     auto instance = wasm::Instance::make(store, module.get(), imports);
     if (!instance) {
@@ -76,14 +86,7 @@ void run() {
         exit(1);
     }
 
-    // Create external function.
-    std::cout << "Creating phi callback..." << std::endl;
-    auto func_type = wasm::FuncType::make(
-      wasm::ownvec<wasm::ValType>::make(),
-      wasm::ownvec<wasm::ValType>::make()
-    );
-    auto callback = wasm::Func::make(phiStore, func_type.get(), hostFunc);
-
+    auto callback = getCallback(phiStore);
     wasm::Extern* phiImports[] = {callback.get()};
     auto phiInstance = wasm::Instance::make(phiStore, phiModule.get(), phiImports);
     if (!phiInstance) {
@@ -92,7 +95,6 @@ void run() {
     }
 
     // Extract export.
-    std::cout << "Extracting export..." << std::endl;
     auto exports = instance->exports();
     if (exports.size() == 0 || exports[0]->kind() != wasm::EXTERN_FUNC || !exports[0]->func()) {
         std::cout << "> Error accessing export!" << std::endl;
@@ -107,8 +109,7 @@ void run() {
     }
     auto phiExportFunc = phiExports[0]->func();
 
-    // Call.
-    std::cout << "Calling export..." << std::endl;
+    // Call original code.
     auto beforeRun = std::chrono::high_resolution_clock::now();
     auto res = run_func->call();
     auto afterRun = std::chrono::high_resolution_clock::now();
@@ -119,24 +120,23 @@ void run() {
     auto runMS = std::chrono::duration_cast<std::chrono::microseconds>(afterRun - beforeRun);
     std::cout << "Original code took " << runMS.count() << " μs." << std::endl;
 
-    std::cout << "Calling phi export..." << std::endl;
+    // Call phi injected code.
     auto beforePhiRun = std::chrono::high_resolution_clock::now();
     auto phiRes = phiExportFunc->call();
     auto afterPhiRun = std::chrono::high_resolution_clock::now();
-    if (res) {
+    if (phiRes) {
         std::cout << "> Error calling phi function!" << std::endl;
         exit(1);
     }
     auto phiRunMS = std::chrono::duration_cast<std::chrono::microseconds>(afterPhiRun - beforePhiRun);
     std::cout << "Phi injected code took " << phiRunMS.count() << " μs." << std::endl;
-
-    // Shut down.
-    std::cout << "Shutting down..." << std::endl;
 }
 
 
 int main(int argc, const char* argv[]) {
-    run();
+    auto engine = wasm::Engine::make(); // There can only be one (per process).
+    run(engine, "../../benchmarks/count-to-mil.wasm", true);
+    run(engine, "../../benchmarks/count-to-mil.wasm", false);
     std::cout << "Done." << std::endl;
     return 0;
 }
