@@ -12,7 +12,7 @@ namespace phi{
 
 std::vector<char>
 inject(std::vector<char>& inputBytes, int64_t interval, std::string &&importModuleName,
-       std::string &&importBaseName) {
+       std::string &&importBaseName, bool optimize) {
     auto module = BinaryenModuleRead(inputBytes.data(), inputBytes.size());
 
 //    std::cout << "Input module:" << std::endl;
@@ -25,7 +25,13 @@ inject(std::vector<char>& inputBytes, int64_t interval, std::string &&importModu
     auto phiPass = std::make_unique<PhiPass>(interval, std::move(importModuleName), std::move(importBaseName));
 
     PassRunner passRunner((Module*)module);
-    passRunner.add(move(phiPass));
+
+    if (optimize) {
+        passRunner.options.optimizeLevel = 4;
+        passRunner.options.shrinkLevel = 0;
+        passRunner.addDefaultOptimizationPasses();
+    }
+    passRunner.add(std::move(phiPass));
     passRunner.run();
 
 //    std::cout << "Output module:" << std::endl;

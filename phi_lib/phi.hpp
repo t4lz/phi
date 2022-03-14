@@ -17,7 +17,7 @@ namespace phi{
 // importBaseName: Base name of the injected imported function.
 std::vector<char>
 inject(std::vector<char>& inputBytes, int64_t interval, std::string &&importModuleName,
-       std::string &&importBaseName);
+       std::string &&importBaseName, bool optimize = true);
 
 //---------------------------------------------------------------------------
 }   // namespace phi
