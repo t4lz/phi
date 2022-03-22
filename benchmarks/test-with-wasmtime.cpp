@@ -146,7 +146,7 @@ int main(int argc, const char* argv[]) {
     loopBenchmark->doFullTest(run, 100, 10000000);
 
     auto iFFTBenchmark = std::make_unique<Benchmark>(engine, "../../benchmarks/benchmark-files/iFFT.wasm");
-    loopBenchmark->doFullTest(run, 100, 10000000);
+    iFFTBenchmark->doFullTest(run, 100, 10000);
 
     std::cout << "Done." << std::endl;
     return 0;
