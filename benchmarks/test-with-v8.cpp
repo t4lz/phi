@@ -15,7 +15,17 @@ auto hostFunc(
 //    std::cout << "Calling back..." << std::endl << "> " << args[0] << std::endl;
 //    results[0] = args[0].copy();
     std::cout << "host called!" << std::endl;
-    return nullptr;
+    return {};
+//    return nullptr;
+}
+
+auto wasiExit(
+        void* env, const wasm::Val args[], wasm::Val results[]
+) -> wasm::own<wasm::Trap> {
+    std::cout << "wasi exit called" << std::endl;
+    auto store = reinterpret_cast<wasm::Store*>(env);
+    auto message = wasm::Name::make(std::string("Wasi Exit"));
+    return wasm::Trap::make(store, message);
 }
 
 wasm::vec<byte_t> getBinary(std::string&& filename) {
@@ -44,7 +54,7 @@ std::unique_ptr<wasm::Func> getCallback(wasm::Store* store) {
 }
 
 
-void run(std::unique_ptr<wasm::Engine>& engine, std::string&& wasmFile, bool callHost = true) {
+void run(std::unique_ptr<wasm::Engine>& engine, std::string&& wasmFile, bool callHost = true, bool wasi = false) {
     // Wee8 boilerplate:
     auto store_ = wasm::Store::make(engine.get());
     auto store = store_.get();
@@ -67,11 +77,13 @@ void run(std::unique_ptr<wasm::Engine>& engine, std::string&& wasmFile, bool cal
     auto phiBinaryVec = wasm::vec<byte_t>::make(phiBinary.size(), phiBinary.data());
 
     // Compile.
+    std::cout << "Compiling input module." << std::endl;
     auto module = wasm::Module::make(store, binary);
     if (!module) {
         std::cout << "> Error compiling module!" << std::endl;
         exit(1);
     }
+    std::cout << "Compiling phi module." << std::endl;
     auto phiModule = wasm::Module::make(phiStore, phiBinaryVec);
     if (!phiModule) {
         std::cout << "> Error compiling phi injected module!" << std::endl;
@@ -79,6 +91,7 @@ void run(std::unique_ptr<wasm::Engine>& engine, std::string&& wasmFile, bool cal
     }
 
     // Instantiate.
+    std::cout << "Instantiating input module." << std::endl;
     wasm::Extern* imports[] = {};
     auto instance = wasm::Instance::make(store, module.get(), imports);
     if (!instance) {
@@ -86,6 +99,7 @@ void run(std::unique_ptr<wasm::Engine>& engine, std::string&& wasmFile, bool cal
         exit(1);
     }
 
+    std::cout << "Instantiating phied module." << std::endl;
     auto callback = getCallback(phiStore);
     wasm::Extern* phiImports[] = {callback.get()};
     auto phiInstance = wasm::Instance::make(phiStore, phiModule.get(), phiImports);
@@ -96,22 +110,29 @@ void run(std::unique_ptr<wasm::Engine>& engine, std::string&& wasmFile, bool cal
 
     // Extract export.
     auto exports = instance->exports();
-    if (exports.size() == 0 || exports[0]->kind() != wasm::EXTERN_FUNC || !exports[0]->func()) {
+    int i;
+    for (i=0; i<exports.size() && (exports[i]->kind() != wasm::EXTERN_FUNC || !exports[i]->func()); i++);
+    if (i == exports.size()) {
         std::cout << "> Error accessing export!" << std::endl;
         exit(1);
     }
-    auto run_func = exports[0]->func();
+    auto run_func = exports[i]->func();
 
     auto phiExports = phiInstance->exports();
-    if (phiExports.size() == 0 || phiExports[0]->kind() != wasm::EXTERN_FUNC || !phiExports[0]->func()) {
+    for (i=0; i<phiExports.size() && (phiExports[i]->kind() != wasm::EXTERN_FUNC || !phiExports[i]->func()); i++);
+    if (i == phiExports.size()) {
         std::cout << "> Error accessing phi export!" << std::endl;
         exit(1);
     }
-    auto phiExportFunc = phiExports[0]->func();
+    auto phiExportFunc = phiExports[i]->func();
+
+    wasm::Val args[] = {};
+    wasm::Val results[1];
 
     // Call original code.
+    std::cout << "Calling input module." << std::endl;
     auto beforeRun = std::chrono::high_resolution_clock::now();
-    auto res = run_func->call();
+    auto res = run_func->call(args, results);
     auto afterRun = std::chrono::high_resolution_clock::now();
     if (res) {
         std::cout << "> Error calling function!" << std::endl;
@@ -121,8 +142,9 @@ void run(std::unique_ptr<wasm::Engine>& engine, std::string&& wasmFile, bool cal
     std::cout << "Original code took " << runMS.count() << " μs." << std::endl;
 
     // Call phi injected code.
+    std::cout << "Calling phied module." << std::endl;
     auto beforePhiRun = std::chrono::high_resolution_clock::now();
-    auto phiRes = phiExportFunc->call();
+    auto phiRes = phiExportFunc->call(args, results);
     auto afterPhiRun = std::chrono::high_resolution_clock::now();
     if (phiRes) {
         std::cout << "> Error calling phi function!" << std::endl;
@@ -135,8 +157,16 @@ void run(std::unique_ptr<wasm::Engine>& engine, std::string&& wasmFile, bool cal
 
 int main(int argc, const char* argv[]) {
     auto engine = wasm::Engine::make(); // There can only be one (per process).
-    run(engine, "../../benchmarks/count-to-mil.wasm", true);
-    run(engine, "../../benchmarks/count-to-mil.wasm", false);
+    run(engine, "../../benchmarks/benchmark-files/count-to-mil.wasm", true);
+    run(engine, "../../benchmarks/benchmark-files/count-to-mil.wasm", false);
+
+    run(engine, "../../benchmarks/benchmark-files/just42.wasm", false);
+//    std::cout << "cpp42 test:" << std::endl;
+//    run(engine, "../../benchmarks/benchmark-files/cpp42.wasm", false);
+//    std::cout << "md5 test:" << std::endl;
+//    run(engine, "../../benchmarks/benchmark-files/md5.wasm", false);
+//    std::cout << "md5 rust test:" << std::endl;
+//    run(engine, "../../benchmarks/benchmark-files/md5-bench.wasm", false);
     std::cout << "Done." << std::endl;
     return 0;
 }

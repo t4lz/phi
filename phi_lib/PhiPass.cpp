@@ -134,12 +134,26 @@ namespace phi {
         if (!accumulatedCost)
             return;
         Builder builder(*getModule());
-        auto block = builder.blockify(
-                curr,
-                buildCounterDecrease(builder)  // counter -= accumulatedCost.
-        );
-        replaceCurrent(block);
-        accumulatedCost = 0;
+        if (curr && curr->type.isConcrete()) {
+            // curr returns a value, so we can't append code after it. Therefore curr's cost will be payed in advance -
+            // cost will be subtracted before curr.
+            Block* block = nullptr;
+            block = curr->dynCast<Block>();
+            if (block) {
+                // Inject before last instructions. // TODO: is this ok?
+                block->list.insertAt(block->list.size()-1, buildCounterDecrease(builder));
+                accumulatedCost = 0;
+            } else {
+                subtractBeforeCurrent(curr);
+            }
+        } else {    // curr does not return a value append subtraction after it.
+            auto block = builder.blockify(
+                    curr,
+                    buildCounterDecrease(builder)  // counter -= accumulatedCost.
+            );
+            replaceCurrent(block);
+            accumulatedCost = 0;
+        }
     }
 
     // Replace current expression with block that contains check, than current expression.
@@ -191,11 +205,25 @@ namespace phi {
         if (!accumulatedCost)
             return;
         Builder builder(*getModule());
-        *expr = builder.blockify(
-                *expr,
-                buildCounterDecrease(builder)  // counter -= accumulatedCost.
-        );
-        accumulatedCost = 0;
+        if (*expr && (*expr)->type.isConcrete()) {
+            // expr returns a value, so we can't append code after it. Therefore curr's cost will be payed in advance -
+            // cost will be subtracted before curr.
+            Block* block = nullptr;
+            block = (*expr)->dynCast<Block>();
+            if (block) {
+                // Inject before last instructions. // TODO: is this ok?
+                block->list.insertAt(block->list.size()-1, buildCounterDecrease(builder));
+                accumulatedCost = 0;
+            } else {
+                subtractBefore(expr);
+            }
+        } else {    // curr does not return a value. Append subtraction after it.
+            *expr = builder.blockify(
+                    *expr,
+                    buildCounterDecrease(builder)  // counter -= accumulatedCost.
+            );
+            accumulatedCost = 0;
+        }
     }
 
     void PhiPass::visitSwitch(Switch *switchExpr) {

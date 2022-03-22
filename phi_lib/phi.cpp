@@ -9,7 +9,6 @@
 namespace phi{
 //---------------------------------------------------------------------------
 
-
 std::vector<char>
 inject(std::vector<char>& inputBytes, int64_t interval, std::string &&importModuleName,
        std::string &&importBaseName, bool optimize) {
@@ -38,6 +37,22 @@ inject(std::vector<char>& inputBytes, int64_t interval, std::string &&importModu
 //    BinaryenModulePrint(module);
 
     assert(BinaryenModuleValidate(module));
+    auto result = BinaryenModuleAllocateAndWrite(module, nullptr);
+    auto* moduleBuff = static_cast<char*>(result.binary);
+    std::vector<char> moduleByteVector(moduleBuff, moduleBuff + result.binaryBytes);
+    free(result.binary);
+    return std::move(moduleByteVector);
+}
+
+//---------------------------------------------------------------------------
+std::vector<char> justOptimize(std::vector<char>& inputBytes){
+    auto module = BinaryenModuleRead(inputBytes.data(), inputBytes.size());
+    PassRunner passRunner((Module*)module);
+    passRunner.options.optimizeLevel = 4;
+    passRunner.options.shrinkLevel = 0;
+    passRunner.addDefaultOptimizationPasses();
+    passRunner.run();
+
     auto result = BinaryenModuleAllocateAndWrite(module, nullptr);
     auto* moduleBuff = static_cast<char*>(result.binary);
     std::vector<char> moduleByteVector(moduleBuff, moduleBuff + result.binaryBytes);
