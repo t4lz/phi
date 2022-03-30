@@ -10,7 +10,6 @@ namespace phi {
 using namespace wasm;
 
 class PhiPass : public WalkerPass<PostWalker<PhiPass>> {
-
     const int64_t interval;
     int64_t accumulatedCost = 0;
     Name internalFunctionName;
@@ -19,11 +18,8 @@ class PhiPass : public WalkerPass<PostWalker<PhiPass>> {
     std::string importModuleName;
     std::string importBaseName;
 
-
     Name& getInternalFunctionName();
     Name& getGlobalName();
-
-
 
     // Replace current expression with block that contains subtraction, than current expression.
     void subtractBeforeCurrent(Expression* curr);
@@ -50,7 +46,7 @@ public:
     void visitCallIndirect(CallIndirect* callIndirectExpr);
     void visitCallRef(CallRef* callRefExpr);
     void visitBreak(Break* breakExpr);
-    void visitBrOn(Break* breakExpr);
+    void visitBrOn(BrOn* breakExpr);
     void visitBlock(Block* blockExpr);
     void visitFunction(Function* functionExpr);
     void visitSwitch(Switch* switchExpr);

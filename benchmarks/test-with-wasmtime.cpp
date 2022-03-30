@@ -3,13 +3,13 @@
 #include <wasmtime.h>
 #include <string>
 #include <iostream>
-#include <fstream>
 #include <chrono>
 #include "../phi_lib/phi.hpp"
 #include "Benchmark.hpp"
 
 using namespace benchmarks;
 
+volatile static int COUNTER=0;
 
 // based on https://github.com/bytecodealliance/wasmtime/blob/main/examples/wasi/main.c
 
@@ -23,7 +23,8 @@ static wasm_trap_t* hostFunc(
         wasmtime_val_t *results,
         size_t nresults
 ) {
-    std::cout << "Host called!" << std::endl;
+//    std::cout << "Host called!" << std::endl;
+    COUNTER++;
     return nullptr;
 }
 
@@ -93,6 +94,8 @@ void run(Benchmark& benchmark) {
     if (error)
         exit_with_error("failed to locate default export for module", error, nullptr);
 
+    COUNTER = 0;
+
     auto beforeCall = std::chrono::high_resolution_clock::now();
     error = wasmtime_func_call(context, &func, nullptr, 0, nullptr, 0, &trap);
     auto afterCall = std::chrono::high_resolution_clock::now();
@@ -105,6 +108,7 @@ void run(Benchmark& benchmark) {
     if (error)
         exit_with_error("error calling default export", error, trap);
 
+    std::cout << "Host called " << COUNTER << " times!" << std::endl;
     if (benchmark.runConfig.wasi) {
         int exitStatus;
         wasmtime_trap_exit_status(trap, &exitStatus);
@@ -136,17 +140,44 @@ static void exit_with_error(const char *message, wasmtime_error_t *error, wasm_t
     exit(1);
 }
 
-int main(int argc, const char* argv[]) {
-    wasm_engine_t *engine = wasm_engine_new();
 
+void doNormalBenchmarks(wasm_engine_t* engine, int n=100) {
     auto md5Benchmark = std::make_unique<Benchmark>(engine, "../../benchmarks/benchmark-files/md5.wasm");
-    md5Benchmark->doFullTest(run, 100, 200000);
+    md5Benchmark->doFullTest(run, n, 200000);
 
     auto loopBenchmark = std::make_unique<Benchmark>(engine, "../../benchmarks/benchmark-files/count2mil.wasm");
-    loopBenchmark->doFullTest(run, 100, 10000000);
+    loopBenchmark->doFullTest(run, n, 10000000);
 
     auto iFFTBenchmark = std::make_unique<Benchmark>(engine, "../../benchmarks/benchmark-files/iFFT.wasm");
-    iFFTBenchmark->doFullTest(run, 100, 10000);
+    iFFTBenchmark->doFullTest(run, n, 10000);
+}
+
+void doExponentialIntervalBenchmarks(wasm_engine_t* engine, int n=100, int levels=10) {
+    auto loopBenchmark = std::make_unique<Benchmark>(engine, "../../benchmarks/benchmark-files/count2mil.wasm");
+    std::cout << "%%%" << loopBenchmark->filename << ":  " << levels << " Intervals, exponentially (" << n << " times each)" << std::endl;
+
+    // With Phi, 0 calls.
+    loopBenchmark->applyPhi();
+    loopBenchmark->runNTimes(run, n);
+
+    int64_t interval = 10990000;
+
+    for (int i=levels; i>0; i--) {
+        // Call host i times.
+        loopBenchmark->applyPhi(interval);
+        loopBenchmark->runNTimes(run, n);
+        interval >>= 1;
+    }
+}
+
+int main(int argc, const char* argv[]) {
+    wasm_engine_t *engine = wasm_engine_new();
+//    doNormalBenchmarks(engine);
+//    doIntervalBenchmarks(engine, 10);
+//    doExponentialIntervalBenchmarks(engine, 10, 20);
+    auto loopBenchmark = std::make_unique<Benchmark>(engine, "../../benchmarks/benchmark-files/count2bil.wasm");
+    loopBenchmark->applyPhi(1000000000);
+    loopBenchmark->runNTimes(run, 10);
 
     std::cout << "Done." << std::endl;
     return 0;

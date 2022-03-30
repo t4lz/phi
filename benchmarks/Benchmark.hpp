@@ -30,7 +30,9 @@ struct Benchmark {
 
     void applyPhi(int64_t interval = 1000000000);
     void runNTimes(void func(Benchmark&), int n);
-    void doFullTest(void func(Benchmark&), int n=100, int64_t lowInterval=50000, int64_t highInterval=1000000000);
+    void doFullTest(void func(Benchmark&), int n = 100, int64_t lowInterval = 50000, int64_t highInterval = 1000000000);
+    void testIntervals(void (*func)(Benchmark &), int n, int64_t lowInterval = 50000, int levels = 10);
+    void testIntervalsExponentially(void (*func)(Benchmark &), int n, int64_t lowInterval = 50000, int levels = 10);
 
 private:
     std::vector<char> readBinary();      // Read the binary wasm file into `binary`.

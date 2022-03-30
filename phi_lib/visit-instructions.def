@@ -13,19 +13,16 @@ VISIT(SIMDLoadStoreLane);
 VISIT(Const);
 VISIT(Unary);
 VISIT(Binary);
-VISIT(Select); // TODO?
 VISIT(Unreachable);
 VISIT(Pop);
 VISIT(RefNull);
 VISIT(RefIs);
 VISIT(RefFunc);
 VISIT(RefEq);
-VISIT(Try); // TODO?
 VISIT(TupleMake);
 VISIT(TupleExtract);
 VISIT(RefTest);
 VISIT(RefCast);
-VISIT(BrOn); // TODO?
 VISIT(RttCanon);
 VISIT(RttSub);
 VISIT(StructNew);
@@ -42,8 +39,6 @@ VISIT(TableSet);
 VISIT(Load);
 VISIT(Store);
 
-
-
 // 6
 VISIT_COST(MemoryInit, 6);
 VISIT_COST(MemoryCopy, 6);
@@ -55,13 +50,11 @@ VISIT_COST(DataDrop, 5);
 // 4
 VISIT_COST(ArrayInit, 4);
 
-//
-
 // 100
 VISIT_COST(TableSize, 100);
 VISIT_COST(TableGrow, 100);
-VISIT_COST(Throw, 100);
-VISIT_COST(Rethrow, 100);
+VISIT_COST(Throw, 100);     // TODO?
+VISIT_COST(Rethrow, 100);   // TODO?
 VISIT_COST(AtomicRMW, 100);
 VISIT_COST(AtomicCmpxchg, 100);
 VISIT_COST(AtomicWait, 100);
@@ -74,6 +67,8 @@ VISIT_COST(Drop, 100);
 // Not in spec :(
 VISIT(I31New);
 VISIT(I31Get);
+VISIT(Select); // TODO?
+VISIT(Try); // TODO?
 
 #undef VISIT
 #undef VISIT_COST

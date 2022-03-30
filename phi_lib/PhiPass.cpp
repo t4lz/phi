@@ -271,6 +271,11 @@ namespace phi {
         module->addFunction(std::move(import));
     }
 
+    void PhiPass::visitBrOn(BrOn *breakExpr) {
+        accumulatedCost+=3;
+        subtractBeforeCurrent(breakExpr);
+    }
+
     // based on wasm-traversal.h form binaryen.
     // Define all instruction visits with cost 1:
 #define VISIT(CLASS_TO_VISIT)                                               \

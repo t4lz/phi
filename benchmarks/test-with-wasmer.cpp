@@ -37,13 +37,22 @@ void run(Benchmark& benchmark) {
     wasm_extern_vec_t wasiImports;
     auto wasiConf = wasi_config_new("benchmark");
     auto wasiEnv = wasi_env_new(wasiConf);
-    wasi_get_imports(store, module, wasiEnv, &wasiImports);
+    auto result = wasi_get_imports(store, module, wasiEnv, &wasiImports);
+    if (!result) {
+        std::cout << "Failed to get wasi imports" << std::endl;
+        exit(1);
+    }
+
+    std::cout << result << std::endl;
+
     wasm_extern_vec_t imports;
     wasm_extern_vec_t* importsPtr = &wasiImports;
 
+    std::cout << "DEBUG " << wasiImports.size <<  std::endl;
     if (benchmark.runConfig.phi) {
         importsPtr = &imports;
         wasm_extern_vec_new_uninitialized(importsPtr, wasiImports.size + 1);
+        std::cout << "DEBUG" << std::endl;
         for (int i=0; i<wasiImports.size; i++) {
             importsPtr->data[i] = wasiImports.data[i];
         }
@@ -86,8 +95,10 @@ void run(Benchmark& benchmark) {
 
 int main(int argc, const char* argv[]) {
     wasm_engine_t* engine = wasm_engine_new();
-    auto benchmark = std::make_unique<Benchmark>(engine, "../../benchmarks/benchmark-files/md5.wasm");
-    benchmark->doFullTest(run);
+    auto benchmark = std::make_unique<Benchmark>(engine, "../../benchmarks/benchmark-files/cpp42.wasm");
+//    auto benchmark = std::make_unique<Benchmark>(engine, "../../benchmarks/benchmark-files/cpp42wat.wasm");
+    benchmark->runConfig.verbose = true;
+    benchmark->doFullTest(run, 2);
     std::cout << "Done." << std::endl;
     wasm_engine_delete(engine);
     return 0;

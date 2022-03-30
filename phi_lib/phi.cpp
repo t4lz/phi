@@ -35,8 +35,8 @@ inject(std::vector<char>& inputBytes, int64_t interval, std::string &&importModu
 
 //    std::cout << "Output module:" << std::endl;
 //    BinaryenModulePrint(module);
-
     assert(BinaryenModuleValidate(module));
+
     auto result = BinaryenModuleAllocateAndWrite(module, nullptr);
     auto* moduleBuff = static_cast<char*>(result.binary);
     std::vector<char> moduleByteVector(moduleBuff, moduleBuff + result.binaryBytes);

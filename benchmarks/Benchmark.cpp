@@ -76,6 +76,37 @@ namespace benchmarks{
         runNTimes(func, n);
     }
 
+    void
+    Benchmark::testIntervals(void (*func)(Benchmark &), int n, int64_t lowInterval, int levels) {
+        std::cout << "%%%" << filename << ":  " << levels << " Intervals (" << n << " times each)" << std::endl;
+
+        // With Phi, 0 calls.
+        applyPhi();
+        runNTimes(func, n);
+
+        for (int i=1; i<levels; i++) {
+            // Call host i times.
+            applyPhi(lowInterval/i);
+            runNTimes(func, n);
+        }
+    }
+
+    void
+    Benchmark::testIntervalsExponentially(void (*func)(Benchmark &), int n, int64_t lowInterval, int levels) {
+        std::cout << "%%%" << filename << ":  " << levels << " Intervals, exponentially (" << n << " times each)" << std::endl;
+
+        // With Phi, 0 calls.
+        applyPhi();
+        runNTimes(func, n);
+
+        for (int i=levels; i>0; i--) {
+            // Call host i times.
+            applyPhi(lowInterval*(1 << i));
+            lowInterval++;
+            runNTimes(func, n);
+        }
+    }
+
 //---------------------------------------------------------------------------
 }   // namespace benchmarks
 //---------------------------------------------------------------------------
