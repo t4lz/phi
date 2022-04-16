@@ -9,6 +9,8 @@
 
 using namespace benchmarks;
 
+wasmtime_module_t* module = nullptr;
+
 volatile static int COUNTER=0;
 
 // based on https://github.com/bytecodealliance/wasmtime/blob/main/examples/wasi/main.c
@@ -28,7 +30,9 @@ static wasm_trap_t* hostFunc(
     return nullptr;
 }
 
-void run(Benchmark& benchmark) {
+void run(Benchmark& benchmark, size_t n = 1) {
+    std::cout << "~~~" << "with" << (benchmark.runConfig.optimize ? "" : "out") << " other passes, " <<
+              "with" << (benchmark.runConfig.phi ? "" : "out") << " phi. " << std::endl;
     if (benchmark.runConfig.verbose){
         std::cout << "Testing " << benchmark.filename << (benchmark.runConfig.optimize ? " " : " un") << "optimized," << " with" << (benchmark.runConfig.phi ? "" : "out") << " phi." << std::endl;
     }
@@ -47,7 +51,6 @@ void run(Benchmark& benchmark) {
 
 
     // Compile our modules
-    wasmtime_module_t *module = nullptr;
     if (benchmark.runConfig.phi) {
         error = wasmtime_module_new(benchmark.engine, (uint8_t*)benchmark.phiBinary.data(), benchmark.phiBinary.size(), &module);
     } else {
@@ -94,30 +97,33 @@ void run(Benchmark& benchmark) {
     if (error)
         exit_with_error("failed to locate default export for module", error, nullptr);
 
-    COUNTER = 0;
 
-    auto beforeCall = std::chrono::high_resolution_clock::now();
-    error = wasmtime_func_call(context, &func, nullptr, 0, nullptr, 0, &trap);
-    auto afterCall = std::chrono::high_resolution_clock::now();
-    auto injection_ms = std::chrono::duration_cast<std::chrono::microseconds>(afterCall - beforeCall);
-    if (benchmark.runConfig.verbose) {
-        std::cout << "Run took " << injection_ms.count() << " μs." << std::endl;
-    } else {
-        std::cout << injection_ms.count() << std::endl;
-    }
-    if (error)
-        exit_with_error("error calling default export", error, trap);
+    for (int i=0; i<n; i++){
+        COUNTER = 0;
+        auto beforeCall = std::chrono::high_resolution_clock::now();
+        error = wasmtime_func_call(context, &func, nullptr, 0, nullptr, 0, &trap);
+        auto afterCall = std::chrono::high_resolution_clock::now();
+        auto injection_ms = std::chrono::duration_cast<std::chrono::microseconds>(afterCall - beforeCall);
+        if (benchmark.runConfig.verbose) {
+            std::cout << "Run took " << injection_ms.count() << " μs." << std::endl;
+        } else {
+            std::cout << injection_ms.count() << std::endl;
+        }
+        if (error)
+            exit_with_error("error calling default export", error, trap);
 
-    std::cout << "Host called " << COUNTER << " times!" << std::endl;
-    if (benchmark.runConfig.wasi) {
-        int exitStatus;
-        wasmtime_trap_exit_status(trap, &exitStatus);
+        std::cout << "Host called " << COUNTER << " times!" << std::endl;
+        if (benchmark.runConfig.wasi) {
+            int exitStatus;
+            wasmtime_trap_exit_status(trap, &exitStatus);
             if (benchmark.runConfig.verbose) {
                 std::cout << "exit status: " << exitStatus << std::endl;
             }
             if (exitStatus != 42) {
                 exit_with_error("Exit status was not 42 :(", error, trap);
             }
+        }
+
     }
 
     wasmtime_linker_delete(linker);
@@ -158,26 +164,27 @@ void doExponentialIntervalBenchmarks(wasm_engine_t* engine, int n=100, int level
 
     // With Phi, 0 calls.
     loopBenchmark->applyPhi();
-    loopBenchmark->runNTimes(run, n);
+    run(*loopBenchmark, n);
 
     int64_t interval = 10990000;
 
     for (int i=levels; i>0; i--) {
         // Call host i times.
         loopBenchmark->applyPhi(interval);
-        loopBenchmark->runNTimes(run, n);
+        run(*loopBenchmark, n);
         interval >>= 1;
     }
 }
 
 int main(int argc, const char* argv[]) {
     wasm_engine_t *engine = wasm_engine_new();
-//    doNormalBenchmarks(engine);
+//    doNormalBenchmarks(engine, 1000);
 //    doIntervalBenchmarks(engine, 10);
-//    doExponentialIntervalBenchmarks(engine, 10, 20);
-    auto loopBenchmark = std::make_unique<Benchmark>(engine, "../../benchmarks/benchmark-files/count2bil.wasm");
-    loopBenchmark->applyPhi(1000000000);
-    loopBenchmark->runNTimes(run, 10);
+    doExponentialIntervalBenchmarks(engine, 10, 20);
+
+//    auto loopBenchmark = std::make_unique<Benchmark>(engine, "../../benchmarks/benchmark-files/count2bil.wasm");
+//    loopBenchmark->applyPhi(1000000000);
+//    loopBenchmark->runNTimes(run, 10);
 
     std::cout << "Done." << std::endl;
     return 0;

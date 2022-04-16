@@ -73,7 +73,7 @@ void run(std::unique_ptr<wasm::Engine>& engine, std::string&& wasmFile, bool cal
     auto injection_ms = std::chrono::duration_cast<std::chrono::milliseconds>(afterInject - beforeInject);
     std::cout << "Phi injection completed in " << injection_ms.count() << " ms." << std::endl;
 
-    // Convert to weird v8 vec.
+    // Convert to wasm vec.
     auto phiBinaryVec = wasm::vec<byte_t>::make(phiBinary.size(), phiBinary.data());
 
     // Compile.

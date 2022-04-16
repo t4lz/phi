@@ -1,4 +1,4 @@
-VISIT(Nop);
+//VISIT(Nop);
 VISIT(LocalGet);
 VISIT(LocalSet);
 VISIT(GlobalGet);
@@ -53,8 +53,8 @@ VISIT_COST(ArrayInit, 4);
 // 100
 VISIT_COST(TableSize, 100);
 VISIT_COST(TableGrow, 100);
-VISIT_COST(Throw, 100);     // TODO?
-VISIT_COST(Rethrow, 100);   // TODO?
+VISIT_COST(Throw, 100);
+VISIT_COST(Rethrow, 100);
 VISIT_COST(AtomicRMW, 100);
 VISIT_COST(AtomicCmpxchg, 100);
 VISIT_COST(AtomicWait, 100);
@@ -64,11 +64,11 @@ VISIT_COST(MemorySize, 100);
 VISIT_COST(MemoryGrow, 100);
 VISIT_COST(Drop, 100);
 
-// Not in spec :(
+// Not in spec.
 VISIT(I31New);
 VISIT(I31Get);
-VISIT(Select); // TODO?
-VISIT(Try); // TODO?
+VISIT(Select);
+VISIT(Try);
 
 #undef VISIT
 #undef VISIT_COST

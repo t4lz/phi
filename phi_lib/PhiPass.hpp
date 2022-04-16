@@ -28,6 +28,7 @@ class PhiPass : public WalkerPass<PostWalker<PhiPass>> {
     void subtractAfterCurrent(Expression* curr);
     void subtractAfter(Expression **expr);
     void checkBeforeCurrent(Expression* curr);
+    void subtractAndCheckBeforeCurrent(Expression *curr);
     void checkBefore(Expression** expr);
     // Get built counter subtraction "code".
     GlobalSet *buildCounterDecrease(Builder &builder);
@@ -65,7 +66,7 @@ public:
 
 #include "visit-instructions.def"
 
-};
+    };
 
 //---------------------------------------------------------------------------
 }   // namespace phi

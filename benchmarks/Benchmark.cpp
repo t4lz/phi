@@ -38,72 +38,66 @@ namespace benchmarks{
             std::cout << "Phi injection completed in " << injection_ms.count() << " ms." << std::endl;
         }
         runConfig.phi = true;
+        runConfig.recompile = true;
     }
 
-    void Benchmark::runNTimes(void (*func)(Benchmark&), int n) {
-        std::cout << "~~~" << "with" << (runConfig.optimize ? "" : "out") << " other passes, " <<
-                  "with" << (runConfig.phi ? "" : "out") << " phi. " << std::endl;
-        for (int i=0; i<n; i++){
-            func(*this);
-        }
-    }
-
-    void Benchmark::doFullTest(void (*func)(Benchmark &), int n, int64_t lowInterval, int64_t highInterval) {
+    void Benchmark::doFullTest(void (*func)(Benchmark &, size_t), int n, int64_t lowInterval, int64_t highInterval) {
         std::cout << "###" << filename << " (" << n << " times)" << std::endl;
 
         // ----- No extra binaryen passes -----
-        runNTimes(func, n);
+        func(*this, n);
 
         // With Phi, no call.
         applyPhi(highInterval);
-        runNTimes(func, n);
+        func(*this, n);
 
         // With Phi including call.
         applyPhi(lowInterval);
-        runNTimes(func, n);
+        func(*this, n);
 
         // ----- With extra binaryen passes -----
         runConfig.optimize = true;
         runConfig.phi = false;
-        runNTimes(func, n);
+        runConfig.recompile = true;
+        func(*this, n);
 
         // With Phi, no call.
         applyPhi(highInterval);
-        runNTimes(func, n);
+        func(*this, n);
 
         // With Phi including call.
         applyPhi(lowInterval);
-        runNTimes(func, n);
+        func(*this, n);
     }
 
     void
-    Benchmark::testIntervals(void (*func)(Benchmark &), int n, int64_t lowInterval, int levels) {
+    Benchmark::testIntervals(void (*func)(Benchmark &, size_t), int n, int64_t lowInterval, int levels) {
         std::cout << "%%%" << filename << ":  " << levels << " Intervals (" << n << " times each)" << std::endl;
 
         // With Phi, 0 calls.
         applyPhi();
-        runNTimes(func, n);
+        func(*this, n);
 
         for (int i=1; i<levels; i++) {
             // Call host i times.
             applyPhi(lowInterval/i);
-            runNTimes(func, n);
+            func(*this, n);
         }
     }
 
     void
-    Benchmark::testIntervalsExponentially(void (*func)(Benchmark &), int n, int64_t lowInterval, int levels) {
+    Benchmark::testIntervalsExponentially(void (*func)(Benchmark &, size_t), int n, int64_t lowInterval, int levels) {
         std::cout << "%%%" << filename << ":  " << levels << " Intervals, exponentially (" << n << " times each)" << std::endl;
 
         // With Phi, 0 calls.
         applyPhi();
-        runNTimes(func, n);
+        func(*this, n);
 
         for (int i=levels; i>0; i--) {
             // Call host i times.
             applyPhi(lowInterval*(1 << i));
             lowInterval++;
-            runNTimes(func, n);
+            func(*this, n);
         }
     }
 

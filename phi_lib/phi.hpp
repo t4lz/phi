@@ -16,8 +16,8 @@ namespace phi{
 // importModuleName: Module name of the injected imported function.
 // importBaseName: Base name of the injected imported function.
 std::vector<char>
-inject(std::vector<char>& inputBytes, int64_t interval, std::string &&importModuleName,
-       std::string &&importBaseName, bool optimize = true);
+inject(std::vector<char>& inputBytes, int64_t interval, std::string importModuleName,
+       std::string importBaseName, bool optimize = false);
 
 // inputSize: Length of the code written in inputBytes.
 // bufferSize: Length of allocated buffer.

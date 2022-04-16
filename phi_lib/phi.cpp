@@ -10,8 +10,8 @@ namespace phi{
 //---------------------------------------------------------------------------
 
 std::vector<char>
-inject(std::vector<char>& inputBytes, int64_t interval, std::string &&importModuleName,
-       std::string &&importBaseName, bool optimize) {
+inject(std::vector<char>& inputBytes, int64_t interval, std::string importModuleName,
+       std::string importBaseName, bool optimize) {
     auto module = BinaryenModuleRead(inputBytes.data(), inputBytes.size());
 
 //    std::cout << "Input module:" << std::endl;

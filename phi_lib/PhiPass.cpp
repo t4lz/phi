@@ -46,7 +46,6 @@ namespace phi {
     void PhiPass::subtractBeforeCurrent(Expression* curr) {
         if (!accumulatedCost)
             return;
-        // Only decrease counter, without performing check.
         Builder builder(*getModule());
         auto block = builder.blockify(
                 buildCounterDecrease(builder),  // counter -= accumulatedCost.
@@ -83,8 +82,6 @@ namespace phi {
 
 //---------------------------------------------------------------------------
     void PhiPass::visitFunction(Function *functionExpr) {
-        // TODO: what happens when body is nullptr? is it ok?
-
         // accumulatedCost contains any remaining cost from the end of the function.
         subtractAfter(&functionExpr->body);
         checkBefore(&functionExpr->body);
@@ -140,7 +137,7 @@ namespace phi {
             Block* block = nullptr;
             block = curr->dynCast<Block>();
             if (block) {
-                // Inject before last instructions. // TODO: is this ok?
+                // Inject before last instructions.
                 block->list.insertAt(block->list.size()-1, buildCounterDecrease(builder));
                 accumulatedCost = 0;
             } else {
@@ -163,23 +160,31 @@ namespace phi {
         replaceCurrent(block);
     }
 
+    // Replace current expression with block that contains check, than current expression.
+    void PhiPass::subtractAndCheckBeforeCurrent(Expression *curr) {
+        Builder builder(*getModule());
+        auto block = builder.blockify(buildCounterDecrease(builder), buildCheck(builder), curr);
+        replaceCurrent(block);
+        accumulatedCost = 0;
+    }
+
     void PhiPass::doCheckBeforeCurrent(PhiPass *self, Expression **currp) {
         self->checkBeforeCurrent(*currp);
     }
 
-    void PhiPass::walkGlobal(Global *global) { // Nothing. Don't accumulate cost for global defs. TODO: is this ok?
+    void PhiPass::walkGlobal(Global *global) { // Nothing. Don't accumulate cost for global defs.
     }
 
     void PhiPass::visitCall(Call *callExpr) {
         // accumulatedCost already contains also the operands' cost.
         accumulatedCost += 4;   // Pay also cost of the call in advance.
-        checkBeforeCurrent(callExpr);
+        subtractBeforeCurrent(callExpr);
     }
 
     void PhiPass::visitCallIndirect(CallIndirect *callIndirectExpr) {
         // accumulatedCost already contains also the operands' cost.
         accumulatedCost += 6;  // Pay also cost of the call in advance.
-        checkBeforeCurrent(callIndirectExpr);
+        subtractBeforeCurrent(callIndirectExpr);
     }
 
     void PhiPass::subtractBefore(Expression **expr) {
@@ -211,7 +216,7 @@ namespace phi {
             Block* block = nullptr;
             block = (*expr)->dynCast<Block>();
             if (block) {
-                // Inject before last instructions. // TODO: is this ok?
+                // Inject before last instructions.
                 block->list.insertAt(block->list.size()-1, buildCounterDecrease(builder));
                 accumulatedCost = 0;
             } else {
@@ -239,7 +244,7 @@ namespace phi {
     void PhiPass::visitCallRef(CallRef *callRefExpr) {
         // accumulatedCost already contains cost of operands.
         accumulatedCost += 5;  // Pay also cost of the call in advance.
-        checkBeforeCurrent(callRefExpr);
+        subtractBeforeCurrent(callRefExpr);
     }
 
     Name &PhiPass::getInternalFunctionName() {
@@ -280,12 +285,16 @@ namespace phi {
     // Define all instruction visits with cost 1:
 #define VISIT(CLASS_TO_VISIT)                                               \
     void PhiPass::visit##CLASS_TO_VISIT(CLASS_TO_VISIT* curr){              \
+        if (accumulatedCost >= interval)                                    \
+            subtractAndCheckBeforeCurrent(curr);                            \
         accumulatedCost++;                                                  \
     }
 
     // Define all instruction visits that have non-1 cost:
 #define VISIT_COST(CLASS_TO_VISIT, cost)                                    \
     void PhiPass::visit##CLASS_TO_VISIT(CLASS_TO_VISIT* curr){              \
+        if (accumulatedCost >= interval)                                    \
+            subtractAndCheckBeforeCurrent(curr);                            \
         accumulatedCost += cost;                                            \
     }
 
