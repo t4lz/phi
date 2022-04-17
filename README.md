@@ -1,9 +1,8 @@
 # phi
 Inject periodic control handovers into WebAssembly modules.
 
-WebAssembly is a binary code format which is designed to run in a secure sandboxenvironment. 
-The security features of this standard make it very useful for facilitatingthe execution of untrusted code as part of running systems. 
-However, even when thecode is effectively prevented from causing any harm, there is still one problem to besolved - the control loss problem for the host. 
+The security features of WebAssembly make it very useful for facilitatingthe execution of untrusted code as part of running systems. 
+However, even when the code is effectively prevented from causing any harm, there is still one problem to besolved - the control loss problem for the host. 
 When the host calls the guest code, what prevents the guest from just running indefinitely, holding on to system resources?
 
 Phi is a runtime-independent, Wasm-level, solution to the host's control-loss problem, using [Binaryen](https://github.com/WebAssembly/binaryen). 
